@@ -1,0 +1,2469 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DOT - Guess Who</title>
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <!-- Estilos customizados -->
+  <style>
+    html, body {
+      overflow: hidden;
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+    }
+    /* Animação de flip para o envelope/card */
+    @keyframes flip {
+      0%   { transform: perspective(600px) rotateY(0deg); }
+      100% { transform: perspective(600px) rotateY(180deg); }
+    }
+    .flip-animation {
+      animation: flip 0.8s forwards;
+    }
+    /* Animação de fade-in para o card */
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in {
+      animation: fadeIn 0.8s forwards;
+    }
+    /* Animação para o efeito "rain" de frases no fundo */
+    @keyframes fall {
+      0% {
+        transform: translateY(-10%);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(110vh);
+        opacity: 0;
+      }
+    }
+    .rain-phrase {
+      position: absolute;
+      white-space: nowrap;
+      color: rgba(0, 0, 255, 0.2);
+      animation: fall linear infinite;
+    }
+    /* Estilos para o flip card (envelope / card) */
+    .perspective {
+      perspective: 1000px;
+    }
+    .flip-card-inner {
+      transform-style: preserve-3d;
+      transition: transform 0.8s;
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    .flip-card-front, .flip-card-back {
+      backface-visibility: hidden;
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 0.5rem;
+    }
+    .flip-card-back {
+      transform: rotateY(180deg);
+    }
+  </style>
+</head>
+<body class="bg-blue-50 flex flex-col items-center p-2">
+  <!-- Fundo com frases animadas (rain effect) -->
+  <div id="backgroundRain" class="fixed inset-0 pointer-events-none" style="z-index: 0;"></div>
+
+  <!-- Cabeçalho -->
+  <header class="flex justify-between w-full max-w-4xl items-center mb-6 relative z-10">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8d/Guess_who_game_logo.png" alt="Logo Guess Who" class="h-16">
+    <img src="https://upload.wikimedia.org/wikipedia/pt/thumb/1/1f/Nestl%C3%A9_logo.svg/1280px-Nestl%C3%A9_logo.svg.png" alt="Logo da Empresa" class="h-16">
+  </header>
+
+  <!-- Seção de seleção de idioma -->
+  <div id="languageSelection" class="max-w-4xl w-full bg-white rounded-lg shadow p-6 relative z-10 mb-6">
+    <h2 class="text-2xl font-bold text-center mb-4">Select Language / Seleccione el idioma / Selecionar idioma</h2>
+    <div class="flex justify-around">
+      <button data-lang="en" class="lang-btn bg-blue-200 hover:bg-blue-300 rounded px-12 py-3 flex items-center">
+        <img src="https://flagcdn.com/us.svg" alt="US Flag" class="w-6 h-4 mr-2">
+        English
+      </button>
+      <button data-lang="es" class="lang-btn bg-blue-200 hover:bg-blue-300 rounded px-12 py-3 flex items-center">
+        <img src="https://flagcdn.com/es.svg" alt="Spain Flag" class="w-6 h-4 mr-2">
+        Español
+      </button>
+      <button data-lang="pt" class="lang-btn bg-blue-200 hover:bg-blue-300 rounded px-12 py-3 flex items-center">
+        <img src="https://flagcdn.com/br.svg" alt="Brazil Flag" class="w-6 h-4 mr-2">
+        Português
+      </button>
+    </div>
+  </div>
+
+  <!-- Área do jogo -->
+  <div id="gameArea" class="hidden w-full flex flex-col items-center pt-4 relative z-10">
+    <!-- Envelope/Cartão antes do flip com dimensões fixas -->
+    <div id="envelopeContainer" class="w-full flex justify-center mb-6">
+      <div id="envelope" class="w-full max-w-3xl h-[600px] perspective cursor-pointer rounded-lg shadow-xl overflow-hidden transform hover:scale-105 transition-transform duration-300">
+        <div id="flipCardInner" class="flip-card-inner">
+          <div class="flip-card-front bg-gradient-to-br from-blue-200 to-blue-100 flex items-center justify-center rounded-lg border border-gray-200">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/8/8d/Guess_who_game_logo.png" alt="Iniciar" class="object-cover w-half h-half">
+          </div>
+          <div class="flip-card-back bg-gradient-to-br from-blue-200 to-blue-100 flex items-center justify-center rounded-lg border border-gray-200">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/8/8d/Guess_who_game_logo.png" alt="Flip" class="object-cover w-half h-half">
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Card do personagem -->
+    <div id="characterCard" class="hidden w-full flex justify-center"></div>
+    <!-- Botão de reiniciar -->
+    <button id="resetGame" class="hidden mt-6 bg-blue-200 hover:bg-blue-300 rounded px-6 py-3 text-xl">Reset</button>
+  </div>
+
+  <!-- Rodapé com meus créditos -->
+  <footer class="fixed bottom-0 right-0 m-2 text-xs text-gray-500">
+    Developed by <a href="https://teams.microsoft.com/l/chat/0/0?users=lucas.nascimento1@br.nestle.com" target="_blank" class="underline">Lucas Nascimento</a> – DOT
+  </footer>
+
+  <script>
+    let currentLang = "";
+    /* Estrutura dos personagens, hardcoded pra evitar maior consumo de recursos */
+const characters = {
+  pt: [
+    { 
+      nome: "Machado de Assis", 
+      sexo: "M", 
+      profissao: "Escritor", 
+      nacionalidade: "Brasileira", 
+      atributos: "Ícone da literatura brasileira", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Machado_de_Assis_by_Marc_Ferrez.jpg/1200px-Machado_de_Assis_by_Marc_Ferrez.jpg"
+    },
+    { 
+      nome: "Pelé", 
+      sexo: "M", 
+      profissao: "Jogador de Futebol", 
+      nacionalidade: "Brasileira", 
+      atributos: "Rei do Futebol", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/5/5e/Pele_con_brasil_%28cropped%29.jpg"
+    },
+    { 
+      nome: "Princesa Isabel", 
+      sexo: "F", 
+      profissao: "Abolicionista", 
+      nacionalidade: "Brasileira", 
+      atributos: "Assinou a Lei Áurea", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/7/79/Isabel%2C_Princesa_do_Brasil%2C_1846-1921.%282%29.jpg"
+    },
+    { 
+      nome: "Carmen Miranda", 
+      sexo: "F", 
+      profissao: "Cantora e Atriz", 
+      nacionalidade: "Brasileira", 
+      atributos: "Símbolo da cultura brasileira em Hollywood", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/f/fa/Carmen_Miranda_in_That_Night_in_Rio_%281941%29.jpg"
+    },
+    { 
+      nome: "Oscar Niemeyer", 
+      sexo: "M", 
+      profissao: "Arquiteto", 
+      nacionalidade: "Brasileira", 
+      atributos: "Pioneiro da arquitetura moderna", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Oscar_Niemeyer_1968b.jpg/640px-Oscar_Niemeyer_1968b.jpg"
+    },
+    { 
+      nome: "Chico Buarque", 
+      sexo: "M", 
+      profissao: "Músico e Compositor", 
+      nacionalidade: "Brasileira", 
+      atributos: "Ícone da MPB", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Chico_Buarque_in_2023.jpg/640px-Chico_Buarque_in_2023.jpg"
+    },
+    { 
+      nome: "Zumbi dos Palmares", 
+      sexo: "M", 
+      profissao: "Líder Quilombola", 
+      nacionalidade: "Brasileira", 
+      atributos: "Símbolo da resistência negra", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+      foto: "https://static.todamateria.com.br/upload/zu/mb/zumbipalmares-cke.jpg"
+    },
+    { 
+      nome: "Ayrton Senna", 
+      sexo: "M", 
+      profissao: "Piloto de Fórmula 1", 
+      nacionalidade: "Brasileira", 
+      atributos: "Lenda do esporte brasileiro", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+      foto: "https://static.nationalgeographicbrasil.com/files/styles/image_3200/public/senna_divulgacao-gov-bra--1-.jpeg?w=400&h=400&p=top&q=75"
+    },
+    { 
+      nome: "Xuxa", 
+      sexo: "F", 
+      profissao: "Apresentadora e Cantora", 
+      nacionalidade: "Brasileira", 
+      atributos: "Rainha dos Baixinhos", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Xuxa_-_Lady_Night_2024.png/800px-Xuxa_-_Lady_Night_2024.png"
+    },
+    { 
+      nome: "Caetano Veloso", 
+      sexo: "M", 
+      profissao: "Cantor e Compositor", 
+      nacionalidade: "Brasileira", 
+      atributos: "Tropicalista", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/3/32/Caetano_Veloso_entrevista_Haddad_%C2%B7_23-06-2022_%C2%B7_S%C3%A3o_Paulo_%28SP%29_%2852433690124%29_%28cropped_2%29.jpg"
+    },
+    { 
+      nome: "Gilberto Gil", 
+      sexo: "M", 
+      profissao: "Músico e Ex-Ministro", 
+      nacionalidade: "Brasileira", 
+      atributos: "Tropicalista", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+      foto: "https://yt3.googleusercontent.com/qHzIqoaFPkSd5K_O4UjMJ_PStdE5xiFE-lj2ADKkDUlIzq3QCII8BsLrXkw4FVjX862OSjB4tLI=s900-c-k-c0x00ffffff-no-rj"
+    },
+    { 
+      nome: "Elis Regina", 
+      sexo: "F", 
+      profissao: "Cantora", 
+      nacionalidade: "Brasileira", 
+      atributos: "Uma das maiores vozes da MPB", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Elis_regina_1964.jpg/1200px-Elis_regina_1964.jpg"
+    },
+    { 
+      nome: "Roberto Carlos", 
+      sexo: "M", 
+      profissao: "Cantor", 
+      nacionalidade: "Brasileira", 
+      atributos: "Rei da Música Romântica", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+      foto: "https://yt3.googleusercontent.com/UrHM07TRomtbMW-vqHbgS4BXgy6pvD5kxvXbCickolTc-aHdB7ZBXiIJmIVncuvk3wFiWsUU6w=s900-c-k-c0x00ffffff-no-rj"
+    },
+    { 
+      nome: "Djavan", 
+      sexo: "M", 
+      profissao: "Cantor e Compositor", 
+      nacionalidade: "Brasileira", 
+      atributos: "Ícone do MPB", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+      foto: "https://djavan.com.br/content/uploads/2018/11/oceano.jpg"
+    },
+    { 
+      nome: "Lulu Santos", 
+      sexo: "M", 
+      profissao: "Cantor e Compositor", 
+      nacionalidade: "Brasileira", 
+      atributos: "Pop-Rock", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+      foto: "https://lulusantos.com.br/wp-content/uploads/2023/02/lulu-07.jpg"
+    },
+    { 
+      nome: "Marisa Monte", 
+      sexo: "F", 
+      profissao: "Cantora e Compositora", 
+      nacionalidade: "Brasileira", 
+      atributos: "Ícone do MPB", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/2023-09-26_Cerim%C3%B4nia_de_Posse_de_Ludhmila_Hajjar_como_Diretora_Titular_de_Cl%C3%ADnica_M%C3%A9dica_da_Faculdade_de_Medicina_da_USP_01_%28Marisa_Monte%29.jpg/640px-2023-09-26_Cerim%C3%B4nia_de_Posse_de_Ludhmila_Hajjar_como_Diretora_Titular_de_Cl%C3%ADnica_M%C3%A9dica_da_Faculdade_de_Medicina_da_USP_01_%28Marisa_Monte%29.jpg"
+    },
+    { 
+      nome: "Henri Nestlé", 
+      sexo: "M", 
+      profissao: "Empresário", 
+      nacionalidade: "Alemã", 
+      atributos: "Fundador da Nestlé", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/ffb5937ee94e43448767b81d335a4f42.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/a/ae/Henry_Nestle.jpg"
+    },
+    { 
+      nome: "Frida Kahlo", 
+      sexo: "F", 
+      profissao: "Artista", 
+      nacionalidade: "Mexicana", 
+      atributos: "Símbolo do feminismo", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/7e0d264b186e6799ce8cc7b4d3f4a041.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/0/06/Frida_Kahlo%2C_by_Guillermo_Kahlo.jpg"
+    },
+    { 
+      nome: "Yuri Gagarin", 
+      sexo: "M", 
+      profissao: "Cosmonauta", 
+      nacionalidade: "Russo", 
+      atributos: "Primeiro Humano no Espaço", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/21abfe1a95fb7d1c2f7456d008611907.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Yuri_Gagarin_%281961%29_-_Restoration.jpg/800px-Yuri_Gagarin_%281961%29_-_Restoration.jpg"
+    },
+    { 
+      nome: "Amelia Earhart", 
+      sexo: "F", 
+      profissao: "Aviadora", 
+      nacionalidade: "Americana", 
+      atributos: "Aviadora pioneira", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Earhart.jpg/640px-Earhart.jpg"
+    },
+    { 
+      nome: "Michael Jackson", 
+      sexo: "M", 
+      profissao: "Cantor", 
+      nacionalidade: "Americana", 
+      atributos: "Rei do Pop", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://www.onthisday.com/images/people/michael-jackson.jpg?w=360"
+    },
+    { 
+      nome: "Madonna", 
+      sexo: "F", 
+      profissao: "Cantora", 
+      nacionalidade: "Americana", 
+      atributos: "Rainha do Pop", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/c/ca/MadonnaO2171023_%28125_of_133%29_%2853270844239%29_%28cropped%29.jpg"
+    },
+    { 
+      nome: "Elvis Presley", 
+      sexo: "M", 
+      profissao: "Cantor", 
+      nacionalidade: "Americana", 
+      atributos: "Ícone do Rock", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/9/99/Elvis_Presley_promoting_Jailhouse_Rock.jpg"
+    },
+    { 
+      nome: "Mariah Carey", 
+      sexo: "F", 
+      profissao: "Cantora", 
+      nacionalidade: "Americana", 
+      atributos: "Maior número de hits na Billboard", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://yt3.googleusercontent.com/sOq-JBcdZacRFP6I65OQui9DX9HdL_ZsueaTSRDHXjQv-15YmRPXzKStdWTi1m6KD06Yo38Tyg=s900-c-k-c0x00ffffff-no-rj"
+    },
+    { 
+      nome: "Britney Spears", 
+      sexo: "F", 
+      profissao: "Cantora", 
+      nacionalidade: "Americana", 
+      atributos: "Ícone Pop", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Britney_Spears%2C_Roundhouse%2C_London_%28Apple_Music_Festival_2016%29_%2830072929931%29_%28cropped%29.jpg/800px-Britney_Spears%2C_Roundhouse%2C_London_%28Apple_Music_Festival_2016%29_%2830072929931%29_%28cropped%29.jpg"
+    },
+    { 
+      nome: "Marilyn Monroe", 
+      sexo: "F", 
+      profissao: "Atriz", 
+      nacionalidade: "Americana", 
+      atributos: "Símbolo de Hollywood", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/4/4e/Monroecirca1953.jpg"
+    },
+    { 
+      nome: "Leonardo da Vinci", 
+      sexo: "M", 
+      profissao: "Artista e Inventor", 
+      nacionalidade: "Italiana", 
+      atributos: "Renascentista", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/d710d0717b628e30eaeeadf18953d309.svg",
+      foto: "https://p2.trrsf.com/image/fget/cf/940/0/images.terra.com/2019/06/24/leo.jpg"
+    },
+    { 
+      nome: "Albert Einstein", 
+      sexo: "M", 
+      profissao: "Cientista", 
+      nacionalidade: "Alemã", 
+      atributos: "Teoria da Relatividade", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/ffb5937ee94e43448767b81d335a4f42.svg",
+      foto: "https://s4.static.brasilescola.uol.com.br/be/conteudo/images/2-albert-einstein.jpg"
+    },
+    { 
+      nome: "J.K. Rowling", 
+      sexo: "F", 
+      profissao: "Escritora", 
+      nacionalidade: "Britânica", 
+      atributos: "Harry Potter", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/7edb04cc55984206814fc5c1f8374a67.svg",
+      foto: "https://m.media-amazon.com/images/S/amzn-author-media-prod/8cigckin175jtpsk3gs361r4ss.jpg"
+    },
+    { 
+      nome: "Neil Armstrong", 
+      sexo: "M", 
+      profissao: "Astronauta", 
+      nacionalidade: "Americana", 
+      atributos: "Primeiro homem na Lua", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/0/0d/Neil_Armstrong_pose.jpg"
+    },
+    { 
+      nome: "Emma Watson", 
+      sexo: "F", 
+      profissao: "Atriz", 
+      nacionalidade: "Britânica", 
+      atributos: "Hermione Granger", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/7edb04cc55984206814fc5c1f8374a67.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/7/7f/Emma_Watson_2013.jpg"
+    },
+    { 
+      nome: "Vincent van Gogh", 
+      sexo: "M", 
+      profissao: "Pintor", 
+      nacionalidade: "Holandês", 
+      atributos: "Pós-Impressionista", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/1a966316a8f4319fdb0827ec84d09335.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1200px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg"
+    },
+    { 
+      nome: "Barack Obama", 
+      sexo: "M", 
+      profissao: "Ex-Presidente", 
+      nacionalidade: "Americana", 
+      atributos: "Primeiro presidente negro dos EUA", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/President_Barack_Obama.jpg/800px-President_Barack_Obama.jpg"
+    },
+    { 
+      nome: "Isaac Newton", 
+      sexo: "M", 
+      profissao: "Cientista", 
+      nacionalidade: "Britânica", 
+      atributos: "Leis da Gravidade", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/7edb04cc55984206814fc5c1f8374a67.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Portrait_of_Sir_Isaac_Newton%2C_1689_%28brightened%29.jpg/1200px-Portrait_of_Sir_Isaac_Newton%2C_1689_%28brightened%29.jpg"
+    },
+    { 
+      nome: "William Shakespeare", 
+      sexo: "M", 
+      profissao: "Dramaturgo", 
+      nacionalidade: "Britânica", 
+      atributos: "Dramaturgo", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/7edb04cc55984206814fc5c1f8374a67.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Shakespeare.jpg/1200px-Shakespeare.jpg"
+    },
+    { 
+      nome: "Steve Jobs", 
+      sexo: "M", 
+      profissao: "Empresário", 
+      nacionalidade: "Americana", 
+      atributos: "Co-fundador da Apple", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Steve_Jobs_Headshot_2010-CROP2.jpg/800px-Steve_Jobs_Headshot_2010-CROP2.jpg"
+    },
+    { 
+      nome: "Angelina Jolie", 
+      sexo: "F", 
+      profissao: "Atriz e Ativista", 
+      nacionalidade: "Americana", 
+      atributos: "Ativista Humanitária", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/1/12/Angelina_Jolie-643531_%28cropped%29.jpg"
+    },
+    { 
+      nome: "Nelson Mandela", 
+      sexo: "M", 
+      profissao: "Ex-Presidente", 
+      nacionalidade: "Sul-Africana", 
+      atributos: "Lutou contra o apartheid", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/b90c8c1dcf0c9d0271364bf119363e80.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Nelson_Mandela_1994.jpg/640px-Nelson_Mandela_1994.jpg"
+    },
+    { 
+      nome: "Beyoncé", 
+      sexo: "F", 
+      profissao: "Cantora", 
+      nacionalidade: "Americana", 
+      atributos: "Ícone Pop", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://br.web.img3.acsta.net/pictures/19/04/10/17/53/4934423.jpg"
+    },
+    { 
+      nome: "Lady Gaga", 
+      sexo: "F", 
+      profissao: "Cantora e Atriz", 
+      nacionalidade: "Americana", 
+      atributos: "Cantora e Atriz", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/f/fd/Lady_Gaga_in_2023_%28cropped%29.jpg"
+    },
+    { 
+      nome: "Whitney Houston", 
+      sexo: "F", 
+      profissao: "Cantora", 
+      nacionalidade: "Americana", 
+      atributos: "Voz influente", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Whitney_Houston_Welcome_Heroes_8_%28cropped%29.JPEG/640px-Whitney_Houston_Welcome_Heroes_8_%28cropped%29.JPEG"
+    },
+    { 
+      nome: "Elon Musk", 
+      sexo: "M", 
+      profissao: "Empresário", 
+      nacionalidade: "Americana", 
+      atributos: "Tesla/SpaceX", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://rollingstone.com.br/media/_versions/2024/12/elon-musk-game-ia-foto-andrew-harnik-getty-images_widemd.jpg"
+    },
+    { 
+      nome: "Taylor Swift", 
+      sexo: "F", 
+      profissao: "Cantora e Compositora", 
+      nacionalidade: "Americana", 
+      atributos: "Cantora e Compositora", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Taylor_Swift_at_the_Golden_Globes_2024_%28Enhanced%2C_cropped%29_2.jpg/800px-Taylor_Swift_at_the_Golden_Globes_2024_%28Enhanced%2C_cropped%29_2.jpg"
+    },
+    { 
+      nome: "Cristiano Ronaldo", 
+      sexo: "M", 
+      profissao: "Jogador de Futebol", 
+      nacionalidade: "Portuguesa", 
+      atributos: "Jogador de Futebol", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/400f4761982f12b7629f2099d50344ad.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Cristiano_Ronaldo_playing_for_Al_Nassr_FC_against_Persepolis%2C_September_2023_%28cropped%29.jpg/640px-Cristiano_Ronaldo_playing_for_Al_Nassr_FC_against_Persepolis%2C_September_2023_%28cropped%29.jpg"
+    },
+    { 
+      nome: "Oprah Winfrey", 
+      sexo: "F", 
+      profissao: "Apresentadora", 
+      nacionalidade: "Americana", 
+      atributos: "Apresentadora e Empresária", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/f/f6/Pre_Inaugural_Reception_%2852639556983%29_%28cropped%29.jpg"
+    },
+    { 
+      nome: "Stephen Hawking", 
+      sexo: "M", 
+      profissao: "Físico Teórico", 
+      nacionalidade: "Britânica", 
+      atributos: "Físico Teórico", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/7edb04cc55984206814fc5c1f8374a67.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/e/eb/Stephen_Hawking.StarChild.jpg"
+    },
+    { 
+      nome: "Dwayne Johnson", 
+      sexo: "M", 
+      profissao: "Ator", 
+      nacionalidade: "Americana", 
+      atributos: "Ator e Ex-Lutador", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Dwayne_%22The_Rock%22_Johnson_Visits_the_Pentagon_%2841%29_%28cropped%29.jpg/220px-Dwayne_%22The_Rock%22_Johnson_Visits_the_Pentagon_%2841%29_%28cropped%29.jpg"
+    },
+    { 
+      nome: "Greta Thunberg", 
+      sexo: "F", 
+      profissao: "Ativista Ambiental", 
+      nacionalidade: "Sueca", 
+      atributos: "Ativista Ambiental", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/b7f2c9832320cbea040babc31efbc4ae.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/4/46/Greta_Thunberg_Stockholm_2024.jpg"
+    },
+    { 
+      nome: "Lionel Messi", 
+      sexo: "M", 
+      profissao: "Jogador de Futebol", 
+      nacionalidade: "Argentina", 
+      atributos: "Jogador de Futebol", 
+      tipo: "Real",
+      flag: "https://flagpack.xyz/_nuxt/fb2ecacab7ac7d12e740ac8eac3a0fe7.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Lionel-Messi-Argentina-2022-FIFA-World-Cup_sharpness.jpg/640px-Lionel-Messi-Argentina-2022-FIFA-World-Cup_sharpness.jpg"
+    },
+    { 
+      nome: "Walter White", 
+      sexo: "M", 
+      profissao: "Breaking Bad", 
+      nacionalidade: "Americano", 
+      atributos: "Gênio da química, meticuloso, manipulador", 
+      tipo: "Personagem",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://static.wikia.nocookie.net/viloes/images/1/18/Walter_White2.webp/revision/latest?cb=20220907003938&path-prefix=pt-br"
+    },
+    { 
+      nome: "Tony Stark", 
+      sexo: "M", 
+      profissao: "Iron Man", 
+      nacionalidade: "Americano", 
+      atributos: "Bilionário, gênio, playboy, filantropo", 
+      tipo: "Personagem",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://t.ctcdn.com.br/M7_M1ESMxfR2DCICse-_vFGE7jA=/1080x1080/smart/i490793.jpeg"
+    },
+    { 
+      nome: "Geralt de Rívia", 
+      sexo: "M", 
+      profissao: "The Witcher", 
+      nacionalidade: "Rívia", 
+      atributos: "Caçador de monstros, alquimista, solitário", 
+      tipo: "Personagem",
+      flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+      foto: "https://static.wikia.nocookie.net/thewitcher/images/f/f8/Geralt_Rivia.jpg/revision/latest?cb=20200922022758&path-prefix=pt-br"
+    },
+    { 
+      nome: "Darth Vader", 
+      sexo: "M", 
+      profissao: "Star Wars", 
+      nacionalidade: "Tatooine", 
+      atributos: "Sith, poderoso, trágico, redimido", 
+      tipo: "Personagem",
+      flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+      foto: "https://i.pinimg.com/474x/51/e3/7c/51e37c2b688170cdc07888eba287bfd1.jpg"
+    },
+    { 
+      nome: "Homelander", 
+      sexo: "M", 
+      profissao: "The Boys", 
+      nacionalidade: "Americano", 
+      atributos: "Superpoderoso, psicopata, narcisista", 
+      tipo: "Personagem",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://static.wikia.nocookie.net/amazons-the-boys/images/5/5b/Homelander-S4.png/revision/latest?cb=20240614091600"
+    },
+        { 
+      nome: "Eleven", 
+      sexo: "F", 
+      profissao: "Stranger Things", 
+      nacionalidade: "Americana", 
+      atributos: "Telecinética, reservada, traumatizada", 
+      tipo: "Personagem",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://static.wikia.nocookie.net/herois/images/c/ca/Eleven-1983.jpg/revision/latest/scale-to-width-down/351?cb=20210919143247&path-prefix=pt-br"
+    },
+    { 
+      nome: "Joel Miller", 
+      sexo: "M", 
+      profissao: "The Last of Us", 
+      nacionalidade: "Americano", 
+      atributos: "Sobrevivente, protetor, endurecido", 
+      tipo: "Personagem",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://static.wikia.nocookie.net/liberproeliis/images/9/9b/Joel_serie.png/revision/latest?cb=20230226195450&path-prefix=pt-br"
+    },
+    { 
+      nome: "Ellie Williams", 
+      sexo: "F", 
+      profissao: "The Last of Us", 
+      nacionalidade: "Americana", 
+      atributos: "Corajosa, imune, determinada", 
+      tipo: "Personagem",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://static.wikia.nocookie.net/thelastofus/images/1/1d/Part_II_Ellie_infobox.webp/revision/latest?cb=20230216184025&path-prefix=pt-br"
+    },
+    { 
+      nome: "Ahsoka Tano", 
+      sexo: "F", 
+      profissao: "Star Wars", 
+      nacionalidade: "Togruta", 
+      atributos: "Jedi, destemida, sábia", 
+      tipo: "Personagem",
+      flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+      foto: "https://static.wikia.nocookie.net/ptstarwars/images/2/27/Ahsoka-Tano-AG-2023.png/revision/latest?cb=20241004054812"
+    },
+    { 
+      nome: "Loki", 
+      sexo: "M", 
+      profissao: "Avengers", 
+      nacionalidade: "Asgardiano", 
+      atributos: "Trapaceiro, charmoso, imprevisível", 
+      tipo: "Personagem",
+      flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+      foto: "https://cdn.sortiraparis.com/images/80/66131/612884-loki-nouvelle-serie-marvel-sur-disney-devoile-sa-premiere-bande-annonce.jpg"
+    },
+    { 
+      nome: "Wednesday Addams", 
+      sexo: "F", 
+      profissao: "Wandinha (Wednesday)", 
+      nacionalidade: "Americana", 
+      atributos: "Sombria, inteligente, excêntrica", 
+      tipo: "Personagem",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://ew.com/thmb/9Dnj0OpKLVHOGZXzCiV2vjCjVKM=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/JENNA-ORTEGA_Wednesday-71133cb410b04157a93619e6bd109a61.jpg"
+    },
+    { 
+      nome: "John Wick", 
+      sexo: "M", 
+      profissao: "John Wick", 
+      nacionalidade: "Americano", 
+      atributos: "Letal, disciplinado, motivado pela vingança", 
+      tipo: "Personagem",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://static.wikia.nocookie.net/johnwick/images/d/d5/John_Wick_-_Perfil.jpg/revision/latest?cb=20211008174310&path-prefix=pt-br"
+    },
+    { 
+      nome: "Neo", 
+      sexo: "M", 
+      profissao: "Matrix", 
+      nacionalidade: "Americano", 
+      atributos: "Hacker, o escolhido", 
+      tipo: "Personagem",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://pipocamoderna.com.br/storage/2020/02/matrix.jpg"
+    },
+    { 
+      nome: "Saitama", 
+      sexo: "M", 
+      profissao: "One Punch Man", 
+      nacionalidade: "Japonês", 
+      atributos: "Invencível, entediado, poderoso", 
+      tipo: "Personagem",
+      flag: "https://flagpack.xyz/_nuxt/d2e9a9599b8329203bbb4047e45cf0e3.svg",
+      foto: "https://static.wikia.nocookie.net/dragonmaster/images/2/27/Saitama.png/revision/latest/scale-to-width-down/600?cb=20230107191444&path-prefix=pt-br"
+    },
+    { 
+      nome: "Light Yagami", 
+      sexo: "M", 
+      profissao: "Death Note", 
+      nacionalidade: "Japonês", 
+      atributos: "Inteligente, manipulador, justiceiro", 
+      tipo: "Personagem",
+      flag: "https://flagpack.xyz/_nuxt/4c33f58deedd8249a3138014ad8f7ca2.svg",
+      foto: "https://static.wikia.nocookie.net/death-note-brasil/images/4/44/Light_Yagami.jpeg/revision/latest?cb=20170331200709&path-prefix=pt-br"
+    },
+    { 
+      nome: "Rick Sanchez", 
+      sexo: "M", 
+      profissao: "Rick and Morty", 
+      nacionalidade: "Americano", 
+      atributos: "Gênio, alcoólatra, niilista", 
+      tipo: "Personagem",
+      flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/en/a/a6/Rick_Sanchez.png"
+    },
+    { 
+      nome: "Kratos", 
+      sexo: "M", 
+      profissao: "God of War", 
+      nacionalidade: "Grego", 
+      atributos: "Deus da guerra, vingativo, protetor", 
+      tipo: "Personagem",
+      flag: "https://flagpack.xyz/_nuxt/b0fc737cc4482563a9cf9d9fa38556cf.svg",
+      foto: "https://upload.wikimedia.org/wikipedia/pt/a/ae/Kratos_GoW_Ragnarok.jpg"
+    },
+    { 
+      nome: "Mario", 
+      sexo: "M", 
+      profissao: "Super Mario", 
+      nacionalidade: "Italiano", 
+      atributos: "Corajoso, encanador, herói clássico", 
+      tipo: "Personagem",
+      flag: "https://flagpack.xyz/_nuxt/d710d0717b628e30eaeeadf18953d309.svg",
+      foto: "https://static.wikia.nocookie.net/herois/images/c/c4/MPSS_Mario.webp/revision/latest?cb=20220607201508&path-prefix=pt-br"
+    },
+    { 
+      nome: "Luigi", 
+      sexo: "M", 
+      profissao: "Super Mario", 
+      nacionalidade: "Italiano", 
+      atributos: "Medroso, leal, irmão de Mario", 
+      tipo: "Personagem",
+      flag: "https://flagpack.xyz/_nuxt/d710d0717b628e30eaeeadf18953d309.svg",
+      foto: "https://static.wikia.nocookie.net/herois/images/b/bf/Img_MP9_Luigi.png/revision/latest/scale-to-width/360?cb=20240523160527&path-prefix=pt-br"
+    },
+    { 
+      nome: "Barbie", 
+      sexo: "F", 
+      profissao: "Barbie", 
+      nacionalidade: "Boneca", 
+      atributos: "Perfeita, otimista, independente", 
+      tipo: "Personagem",
+      flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+      foto: "https://variety.com/wp-content/uploads/2023/07/MCDBARB_WB054.jpg?w=1000&h=667&crop=1"
+    },
+    { 
+      nome: "Shrek", 
+      sexo: "M", 
+      profissao: "Shrek", 
+      nacionalidade: "Ogro", 
+      atributos: "Rabugento, leal, engraçado", 
+      tipo: "Personagem",
+      flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+      foto: "https://upload.wikimedia.org/wikipedia/pt/e/ed/Shrek%28personagem%29.jpg"
+    },
+    { 
+      nome: "Deadpool", 
+      sexo: "M", 
+      profissao: "MCU", 
+      nacionalidade: "Canadense", 
+      atributos: "Imortal, sarcástico, mercenário", 
+      tipo: "Personagem",
+      flag: "https://flagpack.xyz/_nuxt/d2e9a9599b8329203bbb4047e45cf0e3.svg",
+      foto: "https://prod-ripcut-delivery.disney-plus.net/v1/variant/disney/DDD02B809D3240532CA4CA1D8428986EBA7ABFFA703FFD61CE49C743D34FFD12/scale?width=506&aspectRatio=2.00&format=webp"
+    },
+      ],
+en: [
+  {
+    name: "Machado de Assis",
+    gender: "M",
+    profession: "Writer",
+    nationality: "Brazilian",
+    attributes: "Icon of Brazilian literature",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Machado_de_Assis_by_Marc_Ferrez.jpg/1200px-Machado_de_Assis_by_Marc_Ferrez.jpg"
+  },
+  {
+    name: "Pelé",
+    gender: "M",
+    profession: "Football Player",
+    nationality: "Brazilian",
+    attributes: "King of Football",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/5/5e/Pele_con_brasil_%28cropped%29.jpg"
+  },
+  {
+    name: "Princess Isabel",
+    gender: "F",
+    profession: "Abolitionist",
+    nationality: "Brazilian",
+    attributes: "Signed the Golden Law",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/7/79/Isabel%2C_Princesa_do_Brasil%2C_1846-1921.%282%29.jpg"
+  },
+  {
+    name: "Carmen Miranda",
+    gender: "F",
+    profession: "Singer and Actress",
+    nationality: "Brazilian",
+    attributes: "Symbol of Brazilian culture in Hollywood",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/f/fa/Carmen_Miranda_in_That_Night_in_Rio_%281941%29.jpg"
+  },
+  {
+    name: "Oscar Niemeyer",
+    gender: "M",
+    profession: "Architect",
+    nationality: "Brazilian",
+    attributes: "Pioneer of modern architecture",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Oscar_Niemeyer_1968b.jpg/640px-Oscar_Niemeyer_1968b.jpg"
+  },
+  {
+    name: "Chico Buarque",
+    gender: "M",
+    profession: "Musician and Composer",
+    nationality: "Brazilian",
+    attributes: "Icon of MPB",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Chico_Buarque_in_2023.jpg/640px-Chico_Buarque_in_2023.jpg"
+  },
+  {
+    name: "Zumbi dos Palmares",
+    gender: "M",
+    profession: "Quilombola Leader",
+    nationality: "Brazilian",
+    attributes: "Symbol of Black resistance",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    foto: "https://static.todamateria.com.br/upload/zu/mb/zumbipalmares-cke.jpg"
+  },
+  {
+    name: "Ayrton Senna",
+    gender: "M",
+    profession: "Formula 1 Driver",
+    nationality: "Brazilian",
+    attributes: "Legend of Brazilian sport",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    foto: "https://static.nationalgeographicbrasil.com/files/styles/image_3200/public/senna_divulgacao-gov-bra--1-.jpeg?w=400&h=400&p=top&q=75"
+  },
+  {
+    name: "Xuxa",
+    gender: "F",
+    profession: "Presenter and Singer",
+    nationality: "Brazilian",
+    attributes: "Queen of the Little Ones",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Xuxa_-_Lady_Night_2024.png/800px-Xuxa_-_Lady_Night_2024.png"
+  },
+  {
+    name: "Caetano Veloso",
+    gender: "M",
+    profession: "Singer and Composer",
+    nationality: "Brazilian",
+    attributes: "Tropicalist",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/3/32/Caetano_Veloso_entrevista_Haddad_%C2%B7_23-06-2022_%C2%B7_S%C3%A3o_Paulo_%28SP%29_%2852433690124%29_%28cropped_2%29.jpg"
+  },
+  {
+    name: "Gilberto Gil",
+    gender: "M",
+    profession: "Musician and Former Minister",
+    nationality: "Brazilian",
+    attributes: "Tropicalist",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    foto: "https://yt3.googleusercontent.com/qHzIqoaFPkSd5K_O4UjMJ_PStdE5xiFE-lj2ADKkDUlIzq3QCII8BsLrXkw4FVjX862OSjB4tLI=s900-c-k-c0x00ffffff-no-rj"
+  },
+  {
+    name: "Elis Regina",
+    gender: "F",
+    profession: "Singer",
+    nationality: "Brazilian",
+    attributes: "One of the greatest voices of MPB",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Elis_regina_1964.jpg/1200px-Elis_regina_1964.jpg"
+  },
+  {
+    name: "Roberto Carlos",
+    gender: "M",
+    profession: "Singer",
+    nationality: "Brazilian",
+    attributes: "King of Romantic Music",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    foto: "https://yt3.googleusercontent.com/UrHM07TRomtbMW-vqHbgS4BXgy6pvD5kxvXbCickolTc-aHdB7ZBXiIJmIVncuvk3wFiWsUU6w=s900-c-k-c0x00ffffff-no-rj"
+  },
+  {
+    name: "Djavan",
+    gender: "M",
+    profession: "Singer and Composer",
+    nationality: "Brazilian",
+    attributes: "Icon of MPB",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    foto: "https://djavan.com.br/content/uploads/2018/11/oceano.jpg"
+  },
+  {
+    name: "Lulu Santos",
+    gender: "M",
+    profession: "Singer and Composer",
+    nationality: "Brazilian",
+    attributes: "Pop-Rock",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    foto: "https://lulusantos.com.br/wp-content/uploads/2023/02/lulu-07.jpg"
+  },
+  {
+    name: "Marisa Monte",
+    gender: "F",
+    profession: "Singer and Songwriter",
+    nationality: "Brazilian",
+    attributes: "Icon of MPB",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/2023-09-26_Cerim%C3%B4nia_de_Posse_de_Ludhmila_Hajjar_como_Diretora_Titular_de_Cl%C3%ADnica_M%C3%A9dica_da_Faculdade_de_Medicina_da_USP_01_%28Marisa_Monte%29.jpg/640px-2023-09-26_Cerim%C3%B4nia_de_Posse_de_Ludhmila_Hajjar_como_Diretora_Titular_de_Cl%C3%ADnica_M%C3%A9dica_da_Faculdade_de_Medicina_da_USP_01_%28Marisa_Monte%29.jpg"
+  },
+  {
+    name: "Henri Nestlé",
+    gender: "M",
+    profession: "Businessman",
+    nationality: "German",
+    attributes: "Founder of Nestlé",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/ffb5937ee94e43448767b81d335a4f42.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/a/ae/Henry_Nestle.jpg"
+  },
+  {
+    name: "Frida Kahlo",
+    gender: "F",
+    profession: "Artist",
+    nationality: "Mexican",
+    attributes: "Symbol of feminism",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/7e0d264b186e6799ce8cc7b4d3f4a041.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/0/06/Frida_Kahlo%2C_by_Guillermo_Kahlo.jpg"
+  },
+  {
+    name: "Yuri Gagarin",
+    gender: "M",
+    profession: "Cosmonaut",
+    nationality: "Russian",
+    attributes: "First Human in Space",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/21abfe1a95fb7d1c2f7456d008611907.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Yuri_Gagarin_%281961%29_-_Restoration.jpg/800px-Yuri_Gagarin_%281961%29_-_Restoration.jpg"
+  },
+  {
+    name: "Amelia Earhart",
+    gender: "F",
+    profession: "Aviator",
+    nationality: "American",
+    attributes: "Pioneering aviator",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Earhart.jpg/640px-Earhart.jpg"
+  },
+  {
+    name: "Michael Jackson",
+    gender: "M",
+    profession: "Singer",
+    nationality: "American",
+    attributes: "King of Pop",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://www.onthisday.com/images/people/michael-jackson.jpg?w=360"
+  },
+  {
+    name: "Madonna",
+    gender: "F",
+    profession: "Singer",
+    nationality: "American",
+    attributes: "Queen of Pop",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/c/ca/MadonnaO2171023_%28125_of_133%29_%2853270844239%29_%28cropped%29.jpg"
+  },
+  {
+    name: "Elvis Presley",
+    gender: "M",
+    profession: "Singer",
+    nationality: "American",
+    attributes: "Rock icon",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/9/99/Elvis_Presley_promoting_Jailhouse_Rock.jpg"
+  },
+  {
+    name: "Mariah Carey",
+    gender: "F",
+    profession: "Singer",
+    nationality: "American",
+    attributes: "Most Billboard hits",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://yt3.googleusercontent.com/sOq-JBcdZacRFP6I65OQui9DX9HdL_ZsueaTSRDHXjQv-15YmRPXzKStdWTi1m6KD06Yo38Tyg=s900-c-k-c0x00ffffff-no-rj"
+  },
+  {
+    name: "Britney Spears",
+    gender: "F",
+    profession: "Singer",
+    nationality: "American",
+    attributes: "Pop icon",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Britney_Spears%2C_Roundhouse%2C_London_%28Apple_Music_Festival_2016%29_%2830072929931%29_%28cropped%29.jpg/800px-Britney_Spears%2C_Roundhouse%2C_London_%28Apple_Music_Festival_2016%29_%2830072929931%29_%28cropped%29.jpg"
+  },
+  {
+    name: "Marilyn Monroe",
+    gender: "F",
+    profession: "Actress",
+    nationality: "American",
+    attributes: "Hollywood symbol",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/4/4e/Monroecirca1953.jpg"
+  },
+  {
+    name: "Leonardo da Vinci",
+    gender: "M",
+    profession: "Artist and Inventor",
+    nationality: "Italian",
+    attributes: "Renaissance man",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/d710d0717b628e30eaeeadf18953d309.svg",
+    foto: "https://p2.trrsf.com/image/fget/cf/940/0/images.terra.com/2019/06/24/leo.jpg"
+  },
+  {
+    name: "Albert Einstein",
+    gender: "M",
+    profession: "Scientist",
+    nationality: "German",
+    attributes: "Theory of Relativity",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/ffb5937ee94e43448767b81d335a4f42.svg",
+    foto: "https://s4.static.brasilescola.uol.com.br/be/conteudo/images/2-albert-einstein.jpg"
+  },
+  {
+    name: "J.K. Rowling",
+    gender: "F",
+    profession: "Writer",
+    nationality: "British",
+    attributes: "Harry Potter",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/7edb04cc55984206814fc5c1f8374a67.svg",
+    foto: "https://m.media-amazon.com/images/S/amzn-author-media-prod/8cigckin175jtpsk3gs361r4ss.jpg"
+  },
+  {
+    name: "Neil Armstrong",
+    gender: "M",
+    profession: "Astronaut",
+    nationality: "American",
+    attributes: "First man on the Moon",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/0/0d/Neil_Armstrong_pose.jpg"
+  },
+  {
+    name: "Emma Watson",
+    gender: "F",
+    profession: "Actress",
+    nationality: "British",
+    attributes: "Hermione Granger",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/7edb04cc55984206814fc5c1f8374a67.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/7/7f/Emma_Watson_2013.jpg"
+  },
+  {
+    name: "Vincent van Gogh",
+    gender: "M",
+    profession: "Painter",
+    nationality: "Dutch",
+    attributes: "Post-Impressionist",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/1a966316a8f4319fdb0827ec84d09335.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1200px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg"
+  },
+  {
+    name: "Barack Obama",
+    gender: "M",
+    profession: "Former President",
+    nationality: "American",
+    attributes: "First Black president of the USA",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/President_Barack_Obama.jpg/800px-President_Barack_Obama.jpg"
+  },
+  {
+    name: "Isaac Newton",
+    gender: "M",
+    profession: "Scientist",
+    nationality: "British",
+    attributes: "Laws of Gravity",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/7edb04cc55984206814fc5c1f8374a67.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Portrait_of_Sir_Isaac_Newton%2C_1689_%28brightened%29.jpg/1200px-Portrait_of_Sir_Isaac_Newton%2C_1689_%28brightened%29.jpg"
+  },
+  {
+    name: "William Shakespeare",
+    gender: "M",
+    profession: "Playwright",
+    nationality: "British",
+    attributes: "Playwright",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/7edb04cc55984206814fc5c1f8374a67.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Shakespeare.jpg/1200px-Shakespeare.jpg"
+  },
+  {
+    name: "Steve Jobs",
+    gender: "M",
+    profession: "Businessman",
+    nationality: "American",
+    attributes: "Co-founder of Apple",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Steve_Jobs_Headshot_2010-CROP2.jpg/800px-Steve_Jobs_Headshot_2010-CROP2.jpg"
+  },
+  {
+    name: "Angelina Jolie",
+    gender: "F",
+    profession: "Actress and Activist",
+    nationality: "American",
+    attributes: "Humanitarian activist",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/1/12/Angelina_Jolie-643531_%28cropped%29.jpg"
+  },
+  {
+    name: "Nelson Mandela",
+    gender: "M",
+    profession: "Former President",
+    nationality: "South African",
+    attributes: "Fought against apartheid",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/b90c8c1dcf0c9d0271364bf119363e80.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Nelson_Mandela_1994.jpg/640px-Nelson_Mandela_1994.jpg"
+  },
+  {
+    name: "Beyoncé",
+    gender: "F",
+    profession: "Singer",
+    nationality: "American",
+    attributes: "Pop icon",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://br.web.img3.acsta.net/pictures/19/04/10/17/53/4934423.jpg"
+  },
+  {
+    name: "Lady Gaga",
+    gender: "F",
+    profession: "Singer and Actress",
+    nationality: "American",
+    attributes: "Singer and Actress",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/f/fd/Lady_Gaga_in_2023_%28cropped%29.jpg"
+  },
+  {
+    name: "Whitney Houston",
+    gender: "F",
+    profession: "Singer",
+    nationality: "American",
+    attributes: "Influential voice",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Whitney_Houston_Welcome_Heroes_8_%28cropped%29.JPEG/640px-Whitney_Houston_Welcome_Heroes_8_%28cropped%29.JPEG"
+  },
+  {
+    name: "Elon Musk",
+    gender: "M",
+    profession: "Businessman",
+    nationality: "American",
+    attributes: "Tesla/SpaceX",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://rollingstone.com.br/media/_versions/2024/12/elon-musk-game-ia-foto-andrew-harnik-getty-images_widemd.jpg"
+  },
+  {
+    name: "Taylor Swift",
+    gender: "F",
+    profession: "Singer and Songwriter",
+    nationality: "American",
+    attributes: "Singer and Songwriter",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Taylor_Swift_at_the_Golden_Globes_2024_%28Enhanced%2C_cropped%29_2.jpg/800px-Taylor_Swift_at_the_Golden_Globes_2024_%28Enhanced%2C_cropped%29_2.jpg"
+  },
+  {
+    name: "Cristiano Ronaldo",
+    gender: "M",
+    profession: "Football Player",
+    nationality: "Portuguese",
+    attributes: "Football Player",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/400f4761982f12b7629f2099d50344ad.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Cristiano_Ronaldo_playing_for_Al_Nassr_FC_against_Persepolis%2C_September_2023_%28cropped%29.jpg/640px-Cristiano_Ronaldo_playing_for_Al_Nassr_FC_against_Persepolis%2C_September_2023_%28cropped%29.jpg"
+  },
+  {
+    name: "Oprah Winfrey",
+    gender: "F",
+    profession: "Presenter",
+    nationality: "American",
+    attributes: "Presenter and Businesswoman",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/f/f6/Pre_Inaugural_Reception_%2852639556983%29_%28cropped%29.jpg"
+  },
+  {
+    name: "Stephen Hawking",
+    gender: "M",
+    profession: "Theoretical Physicist",
+    nationality: "British",
+    attributes: "Theoretical Physicist",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/7edb04cc55984206814fc5c1f8374a67.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/e/eb/Stephen_Hawking.StarChild.jpg"
+  },
+  {
+    name: "Dwayne Johnson",
+    gender: "M",
+    profession: "Actor",
+    nationality: "American",
+    attributes: "Actor and former wrestler",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Dwayne_%22The_Rock%22_Johnson_Visits_the_Pentagon_%2841%29_%28cropped%29.jpg/220px-Dwayne_%22The_Rock%22_Johnson_Visits_the_Pentagon_%2841%29_%28cropped%29.jpg"
+  },
+  {
+    name: "Greta Thunberg",
+    gender: "F",
+    profession: "Environmental Activist",
+    nationality: "Swedish",
+    attributes: "Environmental Activist",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/b7f2c9832320cbea040babc31efbc4ae.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/4/46/Greta_Thunberg_Stockholm_2024.jpg"
+  },
+  {
+    name: "Lionel Messi",
+    gender: "M",
+    profession: "Football Player",
+    nationality: "Argentinian",
+    attributes: "Football Player",
+    type: "Real",
+    flag: "https://flagpack.xyz/_nuxt/fb2ecacab7ac7d12e740ac8eac3a0fe7.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Lionel-Messi-Argentina-2022-FIFA-World-Cup_sharpness.jpg/640px-Lionel-Messi-Argentina-2022-FIFA-World-Cup_sharpness.jpg"
+  },
+  {
+    name: "Walter White",
+    gender: "M",
+    profession: "Breaking Bad",
+    nationality: "American",
+    attributes: "Chemistry genius, meticulous, manipulative",
+    type: "Character",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://static.wikia.nocookie.net/viloes/images/1/18/Walter_White2.webp/revision/latest?cb=20220907003938&path-prefix=pt-br"
+  },
+  {
+    name: "Tony Stark",
+    gender: "M",
+    profession: "Iron Man",
+    nationality: "American",
+    attributes: "Billionaire, genius, playboy, philanthropist",
+    type: "Character",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://t.ctcdn.com.br/M7_M1ESMxfR2DCICse-_vFGE7jA=/1080x1080/smart/i490793.jpeg"
+  },
+  {
+    name: "Geralt of Rivia",
+    gender: "M",
+    profession: "The Witcher",
+    nationality: "Rivia",
+    attributes: "Monster hunter, alchemist, solitary",
+    type: "Character",
+    flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+    foto: "https://static.wikia.nocookie.net/thewitcher/images/f/f8/Geralt_Rivia.jpg/revision/latest?cb=20200922022758&path-prefix=pt-br"
+  },
+  {
+    name: "Darth Vader",
+    gender: "M",
+    profession: "Star Wars",
+    nationality: "Tatooine",
+    attributes: "Sith, powerful, tragic, redeemed",
+    type: "Character",
+    flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+    foto: "https://i.pinimg.com/474x/51/e3/7c/51e37c2b688170cdc07888eba287bfd1.jpg"
+  },
+  {
+    name: "Homelander",
+    gender: "M",
+    profession: "The Boys",
+    nationality: "American",
+    attributes: "Super powerful, psychopath, narcissistic",
+    type: "Character",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://static.wikia.nocookie.net/amazons-the-boys/images/5/5b/Homelander-S4.png/revision/latest?cb=20240614091600"
+  },
+  {
+    name: "Eleven",
+    gender: "F",
+    profession: "Stranger Things",
+    nationality: "American",
+    attributes: "Telekinetic, reserved, traumatized",
+    type: "Character",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://static.wikia.nocookie.net/herois/images/c/ca/Eleven-1983.jpg/revision/latest/scale-to-width-down/351?cb=20210919143247&path-prefix=pt-br"
+  },
+  {
+    name: "Joel Miller",
+    gender: "M",
+    profession: "The Last of Us",
+    nationality: "American",
+    attributes: "Survivor, protector, hardened",
+    type: "Character",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://static.wikia.nocookie.net/liberproeliis/images/9/9b/Joel_serie.png/revision/latest?cb=20230226195450&path-prefix=pt-br"
+  },
+  {
+    name: "Ellie Williams",
+    gender: "F",
+    profession: "The Last of Us",
+    nationality: "American",
+    attributes: "Brave, immune, determined",
+    type: "Character",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://static.wikia.nocookie.net/thelastofus/images/1/1d/Part_II_Ellie_infobox.webp/revision/latest?cb=20230216184025&path-prefix=pt-br"
+  },
+  {
+    name: "Ahsoka Tano",
+    gender: "F",
+    profession: "Star Wars",
+    nationality: "Togruta",
+    attributes: "Jedi, fearless, wise",
+    type: "Character",
+    flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+    foto: "https://static.wikia.nocookie.net/ptstarwars/images/2/27/Ahsoka-Tano-AG-2023.png/revision/latest?cb=20241004054812"
+  },
+  {
+    name: "Loki",
+    gender: "M",
+    profession: "Avengers",
+    nationality: "Asgardian",
+    attributes: "Trickster, charming, unpredictable",
+    type: "Character",
+    flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+    foto: "https://cdn.sortiraparis.com/images/80/66131/612884-loki-nouvelle-serie-marvel-sur-disney-devoile-sa-premiere-bande-annonce.jpg"
+  },
+  {
+    name: "Wednesday Addams",
+    gender: "F",
+    profession: "Wednesday Addams",
+    nationality: "American",
+    attributes: "Dark, intelligent, eccentric",
+    type: "Character",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://ew.com/thmb/9Dnj0OpKLVHOGZXzCiV2vjCjVKM=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/JENNA-ORTEGA_Wednesday-71133cb410b04157a93619e6bd109a61.jpg"
+  },
+  {
+    name: "John Wick",
+    gender: "M",
+    profession: "John Wick",
+    nationality: "American",
+    attributes: "Lethal, disciplined, driven by vengeance",
+    type: "Character",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://static.wikia.nocookie.net/johnwick/images/d/d5/John_Wick_-_Perfil.jpg/revision/latest?cb=20211008174310&path-prefix=pt-br"
+  },
+  {
+    name: "Neo",
+    gender: "M",
+    profession: "The Matrix",
+    nationality: "American",
+    attributes: "Hacker, the chosen one",
+    type: "Character",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://pipocamoderna.com.br/storage/2020/02/matrix.jpg"
+  },
+  {
+    name: "Saitama",
+    gender: "M",
+    profession: "One Punch Man",
+    nationality: "Japanese",
+    attributes: "Invincible, bored, powerful",
+    type: "Character",
+    flag: "https://flagpack.xyz/_nuxt/d2e9a9599b8329203bbb4047e45cf0e3.svg",
+    foto: "https://static.wikia.nocookie.net/dragonmaster/images/2/27/Saitama.png/revision/latest/scale-to-width-down/600?cb=20230107191444&path-prefix=pt-br"
+  },
+  {
+    name: "Light Yagami",
+    gender: "M",
+    profession: "Death Note",
+    nationality: "Japanese",
+    attributes: "Intelligent, manipulative, vigilante",
+    type: "Character",
+    flag: "https://flagpack.xyz/_nuxt/4c33f58deedd8249a3138014ad8f7ca2.svg",
+    foto: "https://static.wikia.nocookie.net/death-note-brasil/images/4/44/Light_Yagami.jpeg/revision/latest?cb=20170331200709&path-prefix=pt-br"
+  },
+  {
+    name: "Rick Sanchez",
+    gender: "M",
+    profession: "Rick and Morty",
+    nationality: "American",
+    attributes: "Genius, alcoholic, nihilist",
+    type: "Character",
+    flag: "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/en/a/a6/Rick_Sanchez.png"
+  },
+  {
+    name: "Kratos",
+    gender: "M",
+    profession: "God of War",
+    nationality: "Greek",
+    attributes: "God of war, vengeful, protective",
+    type: "Character",
+    flag: "https://flagpack.xyz/_nuxt/b0fc737cc4482563a9cf9d9fa38556cf.svg",
+    foto: "https://upload.wikimedia.org/wikipedia/pt/a/ae/Kratos_GoW_Ragnarok.jpg"
+  },
+  {
+    name: "Mario",
+    gender: "M",
+    profession: "Super Mario",
+    nationality: "Italian",
+    attributes: "Brave, plumber, classic hero",
+    type: "Character",
+    flag: "https://flagpack.xyz/_nuxt/d710d0717b628e30eaeeadf18953d309.svg",
+    foto: "https://static.wikia.nocookie.net/herois/images/c/c4/MPSS_Mario.webp/revision/latest?cb=20220607201508&path-prefix=pt-br"
+  },
+  {
+    name: "Luigi",
+    gender: "M",
+    profession: "Super Mario",
+    nationality: "Italian",
+    attributes: "Cowardly, loyal, Mario's brother",
+    type: "Character",
+    flag: "https://flagpack.xyz/_nuxt/d710d0717b628e30eaeeadf18953d309.svg",
+    foto: "https://static.wikia.nocookie.net/herois/images/b/bf/Img_MP9_Luigi.png/revision/latest/scale-to-width/360?cb=20240523160527&path-prefix=pt-br"
+  },
+  {
+    name: "Barbie",
+    gender: "F",
+    profession: "Barbie",
+    nationality: "Doll",
+    attributes: "Perfect, optimistic, independent",
+    type: "Character",
+    flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+    foto: "https://variety.com/wp-content/uploads/2023/07/MCDBARB_WB054.jpg?w=1000&h=667&crop=1"
+  },
+  {
+    name: "Shrek",
+    gender: "M",
+    profession: "Shrek",
+    nationality: "Ogre",
+    attributes: "Grumpy, loyal, funny",
+    type: "Character",
+    flag: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+    foto: "https://upload.wikimedia.org/wikipedia/pt/e/ed/Shrek%28personagem%29.jpg"
+  },
+  {
+    name: "Deadpool",
+    gender: "M",
+    profession: "MCU",
+    nationality: "Canadian",
+    attributes: "Immortal, sarcastic, mercenary",
+    type: "Character",
+    flag: "https://flagpack.xyz/_nuxt/d2e9a9599b8329203bbb4047e45cf0e3.svg",
+    foto: "https://prod-ripcut-delivery.disney-plus.net/v1/variant/disney/DDD02B809D3240532CA4CA1D8428986EBA7ABFFA703FFD61CE49C743D34FFD12/scale?width=506&aspectRatio=2.00&format=webp"
+  }
+],
+
+es: [
+  {
+    "name": "Machado de Assis",
+    "gender": "M",
+    "profession": "Escritor",
+    "nationality": "Brasileño",
+    "attributes": "Ícono de la literatura brasileña",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Machado_de_Assis_by_Marc_Ferrez.jpg/1200px-Machado_de_Assis_by_Marc_Ferrez.jpg"
+  },
+  {
+    "name": "Pelé",
+    "gender": "M",
+    "profession": "Jugador de Fútbol",
+    "nationality": "Brasileño",
+    "attributes": "Rey del Fútbol",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/5/5e/Pele_con_brasil_%28cropped%29.jpg"
+  },
+  {
+    "name": "Princesa Isabel",
+    "gender": "F",
+    "profession": "Abolicionista",
+    "nationality": "Brasileño",
+    "attributes": "Firmó la Ley Áurea",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/7/79/Isabel%2C_Princesa_do_Brasil%2C_1846-1921.%282%29.jpg"
+  },
+  {
+    "name": "Carmen Miranda",
+    "gender": "F",
+    "profession": "Cantante y Actriz",
+    "nationality": "Brasileño",
+    "attributes": "Símbolo de la cultura brasileña en Hollywood",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/f/fa/Carmen_Miranda_in_That_Night_in_Rio_%281941%29.jpg"
+  },
+  {
+    "name": "Oscar Niemeyer",
+    "gender": "M",
+    "profession": "Arquitecto",
+    "nationality": "Brasileño",
+    "attributes": "Pionero de la arquitectura moderna",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Oscar_Niemeyer_1968b.jpg/640px-Oscar_Niemeyer_1968b.jpg"
+  },
+  {
+    "name": "Chico Buarque",
+    "gender": "M",
+    "profession": "Músico y Compositor",
+    "nationality": "Brasileño",
+    "attributes": "Ícono de la MPB",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Chico_Buarque_in_2023.jpg/640px-Chico_Buarque_in_2023.jpg"
+  },
+  {
+    "name": "Zumbi dos Palmares",
+    "gender": "M",
+    "profession": "Líder Quilombola",
+    "nationality": "Brasileño",
+    "attributes": "Símbolo de la resistencia negra",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    "foto": "https://static.todamateria.com.br/upload/zu/mb/zumbipalmares-cke.jpg"
+  },
+  {
+    "name": "Ayrton Senna",
+    "gender": "M",
+    "profession": "Piloto de Fórmula 1",
+    "nationality": "Brasileño",
+    "attributes": "Leyenda del deporte brasileño",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    "foto": "https://static.nationalgeographicbrasil.com/files/styles/image_3200/public/senna_divulgacao-gov-bra--1-.jpeg?w=400&h=400&p=top&q=75"
+  },
+  {
+    "name": "Xuxa",
+    "gender": "F",
+    "profession": "Presentadora y Cantante",
+    "nationality": "Brasileño",
+    "attributes": "Reina de los pequeños",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Xuxa_-_Lady_Night_2024.png/800px-Xuxa_-_Lady_Night_2024.png"
+  },
+  {
+    "name": "Caetano Veloso",
+    "gender": "M",
+    "profession": "Cantante y Compositor",
+    "nationality": "Brasileño",
+    "attributes": "Tropicalista",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/3/32/Caetano_Veloso_entrevista_Haddad_%C2%B7_23-06-2022_%C2%B7_S%C3%A3o_Paulo_%28SP%29_%2852433690124%29_%28cropped_2%29.jpg"
+  },
+  {
+    "name": "Gilberto Gil",
+    "gender": "M",
+    "profession": "Músico y Exministro",
+    "nationality": "Brasileño",
+    "attributes": "Tropicalista",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    "foto": "https://yt3.googleusercontent.com/qHzIqoaFPkSd5K_O4UjMJ_PStdE5xiFE-lj2ADKkDUlIzq3QCII8BsLrXkw4FVjX862OSjB4tLI=s900-c-k-c0x00ffffff-no-rj"
+  },
+  {
+    "name": "Elis Regina",
+    "gender": "F",
+    "profession": "Cantante",
+    "nationality": "Brasileño",
+    "attributes": "Una de las mayores voces de la MPB",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Elis_regina_1964.jpg/1200px-Elis_regina_1964.jpg"
+  },
+  {
+    "name": "Roberto Carlos",
+    "gender": "M",
+    "profession": "Cantante",
+    "nationality": "Brasileño",
+    "attributes": "Rey de la Música Romántica",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    "foto": "https://yt3.googleusercontent.com/UrHM07TRomtbMW-vqHbgS4BXgy6pvD5kxvXbCickolTc-aHdB7ZBXiIJmIVncuvk3wFiWsUU6w=s900-c-k-c0x00ffffff-no-rj"
+  },
+  {
+    "name": "Djavan",
+    "gender": "M",
+    "profession": "Cantante y Compositor",
+    "nationality": "Brasileño",
+    "attributes": "Ícono de la MPB",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    "foto": "https://djavan.com.br/content/uploads/2018/11/oceano.jpg"
+  },
+  {
+    "name": "Lulu Santos",
+    "gender": "M",
+    "profession": "Cantante y Compositor",
+    "nationality": "Brasileño",
+    "attributes": "Pop-Rock",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    "foto": "https://lulusantos.com.br/wp-content/uploads/2023/02/lulu-07.jpg"
+  },
+  {
+    "name": "Marisa Monte",
+    "gender": "F",
+    "profession": "Cantante y Compositora",
+    "nationality": "Brasileño",
+    "attributes": "Ícono de la MPB",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/07526ac1d7faf6537ceae0c33d4ac53c.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/2023-09-26_Cerim%C3%B4nia_de_Posse_de_Ludhmila_Hajjar_como_Diretora_Titular_de_Cl%C3%ADnica_M%C3%A9dica_da_Faculdade_de_Medicina_da_USP_01_%28Marisa_Monte%29.jpg/640px-2023-09-26_Cerim%C3%B4nia_de_Posse_de_Ludhmila_Hajjar_como_Diretora_Titular_de_Cl%C3%ADnica_M%C3%A9dica_da_Faculdade_de_Medicina_da_USP_01_%28Marisa_Monte%29.jpg"
+  },
+  {
+    "name": "Henri Nestlé",
+    "gender": "M",
+    "profession": "Empresario",
+    "nationality": "Alemán",
+    "attributes": "Fundador de Nestlé",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/ffb5937ee94e43448767b81d335a4f42.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/a/ae/Henry_Nestle.jpg"
+  },
+  {
+    "name": "Frida Kahlo",
+    "gender": "F",
+    "profession": "Artista",
+    "nationality": "Mexicana",
+    "attributes": "Símbolo del feminismo",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/7e0d264b186e6799ce8cc7b4d3f4a041.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/0/06/Frida_Kahlo%2C_by_Guillermo_Kahlo.jpg"
+  },
+  {
+    "name": "Yuri Gagarin",
+    "gender": "M",
+    "profession": "Cosmonauta",
+    "nationality": "Ruso",
+    "attributes": "Primer humano en el espacio",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/21abfe1a95fb7d1c2f7456d008611907.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Yuri_Gagarin_%281961%29_-_Restoration.jpg/800px-Yuri_Gagarin_%281961%29_-_Restoration.jpg"
+  },
+  {
+    "name": "Amelia Earhart",
+    "gender": "F",
+    "profession": "Aviadora",
+    "nationality": "Estadounidense",
+    "attributes": "Aviadora pionera",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Earhart.jpg/640px-Earhart.jpg"
+  },
+  {
+    "name": "Michael Jackson",
+    "gender": "M",
+    "profession": "Cantante",
+    "nationality": "Estadounidense",
+    "attributes": "Rey del Pop",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://www.onthisday.com/images/people/michael-jackson.jpg?w=360"
+  },
+  {
+    "name": "Madonna",
+    "gender": "F",
+    "profession": "Cantante",
+    "nationality": "Estadounidense",
+    "attributes": "Reina del Pop",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/c/ca/MadonnaO2171023_%28125_of_133%29_%2853270844239%29_%28cropped%29.jpg"
+  },
+  {
+    "name": "Elvis Presley",
+    "gender": "M",
+    "profession": "Cantante",
+    "nationality": "Estadounidense",
+    "attributes": "Ícono del Rock",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/9/99/Elvis_Presley_promoting_Jailhouse_Rock.jpg"
+  },
+  {
+    "name": "Mariah Carey",
+    "gender": "F",
+    "profession": "Cantante",
+    "nationality": "Estadounidense",
+    "attributes": "El mayor número de hits en Billboard",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://yt3.googleusercontent.com/sOq-JBcdZacRFP6I65OQui9DX9HdL_ZsueaTSRDHXjQv-15YmRPXzKStdWTi1m6KD06Yo38Tyg=s900-c-k-c0x00ffffff-no-rj"
+  },
+  {
+    "name": "Britney Spears",
+    "gender": "F",
+    "profession": "Cantante",
+    "nationality": "Estadounidense",
+    "attributes": "Ícono pop",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Britney_Spears%2C_Roundhouse%2C_London_%28Apple_Music_Festival_2016%29_%2830072929931%29_%28cropped%29.jpg/800px-Britney_Spears%2C_Roundhouse%2C_London_%28Apple_Music_Festival_2016%29_%2830072929931%29_%28cropped%29.jpg"
+  },
+  {
+    "name": "Marilyn Monroe",
+    "gender": "F",
+    "profession": "Actriz",
+    "nationality": "Estadounidense",
+    "attributes": "Símbolo de Hollywood",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/4/4e/Monroecirca1953.jpg"
+  },
+  {
+    "name": "Leonardo da Vinci",
+    "gender": "M",
+    "profession": "Artista e Inventor",
+    "nationality": "Italiano",
+    "attributes": "Renacentista",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/d710d0717b628e30eaeeadf18953d309.svg",
+    "foto": "https://p2.trrsf.com/image/fget/cf/940/0/images.terra.com/2019/06/24/leo.jpg"
+  },
+  {
+    "name": "Albert Einstein",
+    "gender": "M",
+    "profession": "Científico",
+    "nationality": "Alemán",
+    "attributes": "Teoría de la relatividad",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/ffb5937ee94e43448767b81d335a4f42.svg",
+    "foto": "https://s4.static.brasilescola.uol.com.br/be/conteudo/images/2-albert-einstein.jpg"
+  },
+  {
+    "name": "J.K. Rowling",
+    "gender": "F",
+    "profession": "Escritora",
+    "nationality": "Británica",
+    "attributes": "Harry Potter",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/7edb04cc55984206814fc5c1f8374a67.svg",
+    "foto": "https://m.media-amazon.com/images/S/amzn-author-media-prod/8cigckin175jtpsk3gs361r4ss.jpg"
+  },
+  {
+    "name": "Neil Armstrong",
+    "gender": "M",
+    "profession": "Astronauta",
+    "nationality": "Estadounidense",
+    "attributes": "El primer hombre en la Luna",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/0/0d/Neil_Armstrong_pose.jpg"
+  },
+  {
+    "name": "Emma Watson",
+    "gender": "F",
+    "profession": "Actriz",
+    "nationality": "Británica",
+    "attributes": "Hermione Granger",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/7edb04cc55984206814fc5c1f8374a67.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/7/7f/Emma_Watson_2013.jpg"
+  },
+  {
+    "name": "Vincent van Gogh",
+    "gender": "M",
+    "profession": "Pintor",
+    "nationality": "Holandés",
+    "attributes": "Postimpresionista",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/1a966316a8f4319fdb0827ec84d09335.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1200px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg"
+  },
+  {
+    "name": "Barack Obama",
+    "gender": "M",
+    "profession": "Ex-Presidente",
+    "nationality": "Estadounidense",
+    "attributes": "El primer presidente negro de EE.UU.",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/President_Barack_Obama.jpg/800px-President_Barack_Obama.jpg"
+  },
+  {
+    "name": "Isaac Newton",
+    "gender": "M",
+    "profession": "Científico",
+    "nationality": "Británica",
+    "attributes": "Leyes de la gravedad",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/7edb04cc55984206814fc5c1f8374a67.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Portrait_of_Sir_Isaac_Newton%2C_1689_%28brightened%29.jpg/1200px-Portrait_of_Sir_Isaac_Newton%2C_1689_%28brightened%29.jpg"
+  },
+  {
+    "name": "William Shakespeare",
+    "gender": "M",
+    "profession": "Dramaturgo",
+    "nationality": "Británico",
+    "attributes": "Dramaturgo",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/7edb04cc55984206814fc5c1f8374a67.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Shakespeare.jpg/1200px-Shakespeare.jpg"
+  },
+  {
+    "name": "Steve Jobs",
+    "gender": "M",
+    "profession": "Empresario",
+    "nationality": "Estadounidense",
+    "attributes": "Co-fundador de Apple",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Steve_Jobs_Headshot_2010-CROP2.jpg/800px-Steve_Jobs_Headshot_2010-CROP2.jpg"
+  },
+  {
+    "name": "Angelina Jolie",
+    "gender": "F",
+    "profession": "Actriz y Activista",
+    "nationality": "Estadounidense",
+    "attributes": "Activista humanitaria",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/1/12/Angelina_Jolie-643531_%28cropped%29.jpg"
+  },
+  {
+    "name": "Nelson Mandela",
+    "gender": "M",
+    "profession": "Ex-Presidente",
+    "nationality": "Sudafricano",
+    "attributes": "Luchó contra el apartheid",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/b90c8c1dcf0c9d0271364bf119363e80.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Nelson_Mandela_1994.jpg/640px-Nelson_Mandela_1994.jpg"
+  },
+  {
+    "name": "Beyoncé",
+    "gender": "F",
+    "profession": "Cantante",
+    "nationality": "Estadounidense",
+    "attributes": "Ícono pop",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://br.web.img3.acsta.net/pictures/19/04/10/17/53/4934423.jpg"
+  },
+  {
+    "name": "Lady Gaga",
+    "gender": "F",
+    "profession": "Cantante y Actriz",
+    "nationality": "Estadounidense",
+    "attributes": "Cantante y Actriz",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/f/fd/Lady_Gaga_in_2023_%28cropped%29.jpg"
+  },
+  {
+    "name": "Whitney Houston",
+    "gender": "F",
+    "profession": "Cantante",
+    "nationality": "Estadounidense",
+    "attributes": "Voz influyente",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Whitney_Houston_Welcome_Heroes_8_%28cropped%29.JPEG/640px-Whitney_Houston_Welcome_Heroes_8_%28cropped%29.JPEG"
+  },
+  {
+    "name": "Elon Musk",
+    "gender": "M",
+    "profession": "Empresario",
+    "nationality": "Estadounidense",
+    "attributes": "Tesla/SpaceX",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://rollingstone.com.br/media/_versions/2024/12/elon-musk-game-ia-foto-andrew-harnik-getty-images_widemd.jpg"
+  },
+  {
+    "name": "Taylor Swift",
+    "gender": "F",
+    "profession": "Cantante y Compositora",
+    "nationality": "Estadounidense",
+    "attributes": "Cantante y Compositora",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Taylor_Swift_at_the_Golden_Globes_2024_%28Enhanced%2C_cropped%29_2.jpg/800px-Taylor_Swift_at_the_Golden_Globes_2024_%28Enhanced%2C_cropped%29_2.jpg"
+  },
+  {
+    "name": "Cristiano Ronaldo",
+    "gender": "M",
+    "profession": "Jugador de Fútbol",
+    "nationality": "Portuguesa",
+    "attributes": "Jugador de Fútbol",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/400f4761982f12b7629f2099d50344ad.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Cristiano_Ronaldo_playing_for_Al_Nassr_FC_against_Persepolis%2C_September_2023_%28cropped%29.jpg/640px-Cristiano_Ronaldo_playing_for_Al_Nassr_FC_against_Persepolis%2C_September_2023_%28cropped%29.jpg"
+  },
+  {
+    "name": "Oprah Winfrey",
+    "gender": "F",
+    "profession": "Presentadora",
+    "nationality": "Estadounidense",
+    "attributes": "Presentadora y Empresaria",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/f/f6/Pre_Inaugural_Reception_%2852639556983%29_%28cropped%29.jpg"
+  },
+  {
+    "name": "Stephen Hawking",
+    "gender": "M",
+    "profession": "Físico teórico",
+    "nationality": "Británica",
+    "attributes": "Físico teórico",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/7edb04cc55984206814fc5c1f8374a67.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/e/eb/Stephen_Hawking.StarChild.jpg"
+  },
+  {
+    "name": "Dwayne Johnson",
+    "gender": "M",
+    "profession": "Actor",
+    "nationality": "Estadounidense",
+    "attributes": "Actor y exluchador",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Dwayne_%22The_Rock%22_Johnson_Visits_the_Pentagon_%2841%29_%28cropped%29.jpg/220px-Dwayne_%22The_Rock%22_Johnson_Visits_the_Pentagon_%2841%29_%28cropped%29.jpg"
+  },
+  {
+    "name": "Greta Thunberg",
+    "gender": "F",
+    "profession": "Activista ambiental",
+    "nationality": "Sueca",
+    "attributes": "Activista ambiental",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/b7f2c9832320cbea040babc31efbc4ae.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/4/46/Greta_Thunberg_Stockholm_2024.jpg"
+  },
+  {
+    "name": "Lionel Messi",
+    "gender": "M",
+    "profession": "Jugador de Fútbol",
+    "nationality": "Argentino",
+    "attributes": "Jugador de Fútbol",
+    "type": "Real",
+    "flag": "https://flagpack.xyz/_nuxt/fb2ecacab7ac7d12e740ac8eac3a0fe7.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Lionel-Messi-Argentina-2022-FIFA-World-Cup_sharpness.jpg/640px-Lionel-Messi-Argentina-2022-FIFA-World-Cup_sharpness.jpg"
+  },
+  {
+    "name": "Walter White",
+    "gender": "M",
+    "profession": "Breaking Bad",
+    "nationality": "Estadounidense",
+    "attributes": "Genio de la química, meticuloso, manipulador",
+    "type": "personaje",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://static.wikia.nocookie.net/viloes/images/1/18/Walter_White2.webp/revision/latest?cb=20220907003938&path-prefix=pt-br"
+  },
+  {
+    "name": "Tony Stark",
+    "gender": "M",
+    "profession": "Iron Man",
+    "nationality": "Estadounidense",
+    "attributes": "Multimillonario, genio, playboy, filántropo",
+    "type": "personaje",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://t.ctcdn.com.br/M7_M1ESMxfR2DCICse-_vFGE7jA=/1080x1080/smart/i490793.jpeg"
+  },
+  {
+    "name": "Geralt de Rívia",
+    "gender": "M",
+    "profession": "The Witcher",
+    "nationality": "Rívia",
+    "attributes": "Cazador de monstruos, alquimista, solitario",
+    "type": "personaje",
+    "flag": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+    "foto": "https://static.wikia.nocookie.net/thewitcher/images/f/f8/Geralt_Rivia.jpg/revision/latest?cb=20200922022758&path-prefix=pt-br"
+  },
+  {
+    "name": "Darth Vader",
+    "gender": "M",
+    "profession": "Star Wars",
+    "nationality": "Tatooine",
+    "attributes": "Sith, poderoso, trágico, redimido",
+    "type": "personaje",
+    "flag": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+    "foto": "https://i.pinimg.com/474x/51/e3/7c/51e37c2b688170cdc07888eba287bfd1.jpg"
+  },
+  {
+    "name": "Homelander",
+    "gender": "M",
+    "profession": "The Boys",
+    "nationality": "Estadounidense",
+    "attributes": "Súper poderoso, psicópata, narcisista",
+    "type": "personaje",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://static.wikia.nocookie.net/amazons-the-boys/images/5/5b/Homelander-S4.png/revision/latest?cb=20240614091600"
+  },
+  {
+    "name": "Eleven",
+    "gender": "F",
+    "profession": "Stranger Things",
+    "nationality": "Estadounidense",
+    "attributes": "Telequinética, reservada, traumatizada",
+    "type": "personaje",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://static.wikia.nocookie.net/herois/images/c/ca/Eleven-1983.jpg/revision/latest/scale-to-width-down/351?cb=20210919143247&path-prefix=pt-br"
+  },
+  {
+    "name": "Joel Miller",
+    "gender": "M",
+    "profession": "The Last of Us",
+    "nationality": "Estadounidense",
+    "attributes": "Superviviente, protector, endurecido",
+    "type": "personaje",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://static.wikia.nocookie.net/liberproeliis/images/9/9b/Joel_serie.png/revision/latest?cb=20230226195450&path-prefix=pt-br"
+  },
+  {
+    "name": "Ellie Williams",
+    "gender": "F",
+    "profession": "The Last of Us",
+    "nationality": "Estadounidense",
+    "attributes": "Valiente, inmune, determinada",
+    "type": "personaje",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://static.wikia.nocookie.net/thelastofus/images/1/1d/Part_II_Ellie_infobox.webp/revision/latest?cb=20230216184025&path-prefix=pt-br"
+  },
+  {
+    "name": "Ahsoka Tano",
+    "gender": "F",
+    "profession": "Star Wars",
+    "nationality": "Togruta",
+    "attributes": "Jedi, intrépida, sabia",
+    "type": "personaje",
+    "flag": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+    "foto": "https://static.wikia.nocookie.net/ptstarwars/images/2/27/Ahsoka-Tano-AG-2023.png/revision/latest?cb=20241004054812"
+  },
+  {
+    "name": "Loki",
+    "gender": "M",
+    "profession": "Avengers",
+    "nationality": "Asgardiano",
+    "attributes": "Tramposo, encantador, impredecible",
+    "type": "personaje",
+    "flag": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+    "foto": "https://cdn.sortiraparis.com/images/80/66131/612884-loki-nouvelle-serie-marvel-sur-disney-devoile-sa-premiere-bande-annonce.jpg"
+  },
+  {
+    "name": "Wednesday Addams",
+    "gender": "F",
+    "profession": "Wandinha (Wednesday)",
+    "nationality": "Estadounidense",
+    "attributes": "Sombría, inteligente, excéntrica",
+    "type": "personaje",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://ew.com/thmb/9Dnj0OpKLVHOGZXzCiV2vjCjVKM=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/JENNA-ORTEGA_Wednesday-71133cb410b04157a93619e6bd109a61.jpg"
+  },
+  {
+    "name": "John Wick",
+    "gender": "M",
+    "profession": "John Wick",
+    "nationality": "Estadounidense",
+    "attributes": "Letal, disciplinado, motivado por la venganza",
+    "type": "personaje",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://static.wikia.nocookie.net/johnwick/images/d/d5/John_Wick_-_Perfil.jpg/revision/latest?cb=20211008174310&path-prefix=pt-br"
+  },
+  {
+    "name": "Neo",
+    "gender": "M",
+    "profession": "The Matrix",
+    "nationality": "Estadounidense",
+    "attributes": "Hacker, el elegido",
+    "type": "personaje",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://pipocamoderna.com.br/storage/2020/02/matrix.jpg"
+  },
+  {
+    "name": "Saitama",
+    "gender": "M",
+    "profession": "One Punch Man",
+    "nationality": "Japonés",
+    "attributes": "Invencible, aburrido, poderoso",
+    "type": "personaje",
+    "flag": "https://flagpack.xyz/_nuxt/d2e9a9599b8329203bbb4047e45cf0e3.svg",
+    "foto": "https://static.wikia.nocookie.net/dragonmaster/images/2/27/Saitama.png/revision/latest/scale-to-width-down/600?cb=20230107191444&path-prefix=pt-br"
+  },
+  {
+    "name": "Light Yagami",
+    "gender": "M",
+    "profession": "Death Note",
+    "nationality": "Japonés",
+    "attributes": "Inteligente, manipulador, justiciero",
+    "type": "personaje",
+    "flag": "https://flagpack.xyz/_nuxt/4c33f58deedd8249a3138014ad8f7ca2.svg",
+    "foto": "https://static.wikia.nocookie.net/death-note-brasil/images/4/44/Light_Yagami.jpeg/revision/latest?cb=20170331200709&path-prefix=pt-br"
+  },
+  {
+    "name": "Rick Sanchez",
+    "gender": "M",
+    "profession": "Rick and Morty",
+    "nationality": "Estadounidense",
+    "attributes": "Genio, alcohólico, nihilista",
+    "type": "personaje",
+    "flag": "https://flagpack.xyz/_nuxt/4c829b6c0131de7162790d2f897a90fd.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/en/a/a6/Rick_Sanchez.png"
+  },
+  {
+    "name": "Kratos",
+    "gender": "M",
+    "profession": "God of War",
+    "nationality": "Griego",
+    "attributes": "Dios de la guerra, vengativo, protector",
+    "type": "personaje",
+    "flag": "https://flagpack.xyz/_nuxt/b0fc737cc4482563a9cf9d9fa38556cf.svg",
+    "foto": "https://upload.wikimedia.org/wikipedia/pt/a/ae/Kratos_GoW_Ragnarok.jpg"
+  },
+  {
+    "name": "Mario",
+    "gender": "M",
+    "profession": "Super Mario",
+    "nationality": "Italiano",
+    "attributes": "Valiente, fontanero, héroe clásico",
+    "type": "personaje",
+    "flag": "https://flagpack.xyz/_nuxt/d710d0717b628e30eaeeadf18953d309.svg",
+    "foto": "https://static.wikia.nocookie.net/herois/images/c/c4/MPSS_Mario.webp/revision/latest?cb=20220607201508&path-prefix=pt-br"
+  },
+  {
+    "name": "Luigi",
+    "gender": "M",
+    "profession": "Super Mario",
+    "nationality": "Italiano",
+    "attributes": "Miedoso, leal, hermano de Mario",
+    "type": "personaje",
+    "flag": "https://flagpack.xyz/_nuxt/d710d0717b628e30eaeeadf18953d309.svg",
+    "foto": "https://static.wikia.nocookie.net/herois/images/b/bf/Img_MP9_Luigi.png/revision/latest/scale-to-width/360?cb=20240523160527&path-prefix=pt-br"
+  },
+  {
+    "name": "Barbie",
+    "gender": "F",
+    "profession": "Barbie",
+    "nationality": "Muñeca",
+    "attributes": "Perfecta, optimista, independiente",
+    "type": "personaje",
+    "flag": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+    "foto": "https://variety.com/wp-content/uploads/2023/07/MCDBARB_WB054.jpg?w=1000&h=667&crop=1"
+  },
+  {
+    "name": "Shrek",
+    "gender": "M",
+    "profession": "Shrek",
+    "nationality": "Ogro",
+    "attributes": "Gruñón, leal, divertido",
+    "type": "personaje",
+    "flag": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Nuvola_unknown_flag.svg/256px-Nuvola_unknown_flag.svg.png",
+    "foto": "https://upload.wikimedia.org/wikipedia/pt/e/ed/Shrek%28personagem%29.jpg"
+  },
+  {
+    "name": "Deadpool",
+    "gender": "M",
+    "profession": "MCU",
+    "nationality": "Canadiense",
+    "attributes": "Inmortal, sarcástico, mercenario",
+    "type": "personaje",
+    "flag": "https://flagpack.xyz/_nuxt/d2e9a9599b8329203bbb4047e45cf0e3.svg",
+    "foto": "https://prod-ripcut-delivery.disney-plus.net/v1/variant/disney/DDD02B809D3240532CA4CA1D8428986EBA7ABFFA703FFD61CE49C743D34FFD12/scale?width=506&aspectRatio=2.00&format=webp"
+  }
+]
+    };
+
+    function getCookie(name) {
+      let nameEQ = name + "=";
+      let ca = document.cookie.split(';');
+      for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length);
+      }
+      return null;
+    }
+
+    function setCookie(name, value, days) {
+      let expires = "";
+      if (days) {
+        let date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + date.toUTCString();
+      }
+      document.cookie = name + "=" + (value || "") + expires + "; path=/";
+    }
+
+    function getUsedCharacters() {
+      let cookie = getCookie("used_" + currentLang);
+      if (cookie) {
+        try {
+          return JSON.parse(cookie);
+        } catch (e) {
+          return [];
+        }
+      }
+      return [];
+    }
+
+    function generateBackgroundRain(lang) {
+      const phrases = {
+        pt: [
+          "Qual a nacionalidade?",
+          "O personagem é real ou fictício?",
+          "Qual a profissão?",
+          "É masculino ou feminino?",
+          "De qual área?",
+          "É real ou fictício?",
+          "É um herói?",
+          "É um vilão?",
+          "Já ganho um oscar?",
+          "É um cientista?",
+          "É um político?",
+          "É um músico?"
+        ],
+        en: [
+          "What's the nationality?",  
+          "Is the character real or fictional?",  
+          "What’s the profession?",  
+          "Is it male or female?",  
+          "From which field?",  
+          "Is it real or fictional?",  
+          "Is it a hero?",  
+          "Is it a villain?",  
+          "Has it won an Oscar?",  
+          "Is it a scientist?",  
+          "Is it a politician?",  
+          "Is it a musician?"  
+        ],
+        es: [
+          "¿Cuál es la nacionalidad?",  
+          "¿El personaje es real o ficticio?",  
+          "¿Cuál es la profesión?",  
+          "¿Es masculino o femenino?",  
+          "¿De qué área?",  
+          "¿Es real o ficticio?",  
+          "¿Es un héroe?",  
+          "¿Es un villano?",  
+          "¿Ha ganado un Óscar?",  
+          "¿Es un científico?",  
+          "¿Es un político?",  
+          "¿Es un músico?"  
+        ]
+      };
+
+      const container = document.getElementById("backgroundRain");
+      container.innerHTML = "";
+      for (let i = 0; i < 7; i++) {
+        const phraseText = phrases[lang][Math.floor(Math.random() * phrases[lang].length)];
+        const phraseElem = document.createElement("p");
+        phraseElem.className = "rain-phrase";
+        phraseElem.innerText = phraseText;
+        phraseElem.style.left = (Math.random() * 10) + "vw";
+        const duration = 15 + Math.random() * 15;
+        phraseElem.style.animationDuration = duration + "s";
+        phraseElem.style.animationDelay = "-" + (Math.random() * duration) + "s";
+        phraseElem.style.fontSize = (1.5 + Math.random() * 1.5) + "rem";
+        container.appendChild(phraseElem);
+      }
+      for (let i = 0; i < 10; i++) {
+        const phraseText = phrases[lang][Math.floor(Math.random() * phrases[lang].length)];
+        const phraseElem = document.createElement("p");
+        phraseElem.className = "rain-phrase";
+        phraseElem.innerText = phraseText;
+        phraseElem.style.right = (Math.random() * 10) + "vw";
+        const duration = 15 + Math.random() * 15;
+        phraseElem.style.animationDuration = duration + "s";
+        phraseElem.style.animationDelay = "-" + (Math.random() * duration) + "s";
+        phraseElem.style.fontSize = (1.5 + Math.random() * 1.5) + "rem";
+        container.appendChild(phraseElem);
+      }
+    }
+
+    // Gera o card do personagem com as mesmas dimensões do envelope (600px de altura)
+    function generateCharacterCard(char) {
+      const nome          = currentLang === "pt" ? char.nome : char.name;
+      const sexo          = currentLang === "pt" ? char.sexo : char.gender;
+      const profissao     = currentLang === "pt" ? char.profissao : char.profession;
+      const nacionalidade = currentLang === "pt" ? char.nacionalidade : char.nationality;
+      const tipo          = currentLang === "pt" ? char.tipo : char.type;
+      const atributos     = currentLang === "pt" ? char.atributos : char.attributes;
+      
+      return `
+        <div class="w-full max-w-3xl h-[600px] bg-white rounded-lg shadow-2xl border-4 border-blue-300 overflow-hidden">
+          <div class="flex justify-center pt-6">
+            <img src="${char.foto}" alt="${nome}" class="w-48 h-48 rounded-full object-cover border-4 border-blue-300">
+          </div>
+          <div class="bg-blue-500 py-4">
+            <h2 class="text-center text-4xl font-bold text-white drop-shadow-lg">${nome}</h2>
+          </div>
+          <div class="p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <img src="${char.flag}" alt=flag class="w-10 h-10">
+                <span class="text-gray-800 font-semibold text-xl">${nacionalidade}</span>
+              </div>
+              <span class="bg-blue-300 text-white text-lg font-bold px-4 py-2 rounded-full">${profissao}</span>
+            </div>
+            <div class="space-y-2">
+              <p class="text-gray-700 text-xl"><strong>${currentLang === 'pt' ? 'Sexo' : (currentLang === 'en' ? 'Gender' : 'Género')}:</strong> ${sexo}</p>
+              <p class="text-gray-700 text-xl"><strong>${currentLang === 'pt' ? 'Tipo' : (currentLang === 'en' ? 'Type' : 'Tipo')}:</strong> ${tipo}</p>
+              <p class="text-gray-700 text-xl"><strong>${currentLang === 'pt' ? 'Atributos' : (currentLang === 'en' ? 'Attributes' : 'Atributos')}:</strong> ${atributos}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Seleção de idioma
+    document.querySelectorAll(".lang-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        currentLang = btn.getAttribute("data-lang");
+        document.getElementById("languageSelection").classList.add("hidden");
+        document.getElementById("gameArea").classList.remove("hidden");
+        generateBackgroundRain(currentLang);
+      });
+    });
+
+    // Ao clicar no envelope (formato de card) executa o flip e revela o personagem
+    document.getElementById("envelope").addEventListener("click", function() {
+      const flipCardInner = document.getElementById("flipCardInner");
+      flipCardInner.classList.add("flip-animation");
+      setTimeout(() => {
+        let used = getUsedCharacters();
+        let available = characters[currentLang]
+          .map((_, index) => index)
+          .filter(index => !used.includes(index));
+        if (available.length === 0) {
+          alert("Todos os personagens foram exibidos. Reiniciando lista.");
+          setCookie("used_" + currentLang, "", -1);
+          used = [];
+          available = characters[currentLang].map((_, index) => index);
+        }
+        let randomIndex = available[Math.floor(Math.random() * available.length)];
+        let newUsed = used.concat(randomIndex);
+        setCookie("used_" + currentLang, JSON.stringify(newUsed), 7);
+        let char = characters[currentLang][randomIndex];
+        const cardHtml = generateCharacterCard(char);
+        const characterCard = document.getElementById("characterCard");
+        characterCard.innerHTML = cardHtml;
+        document.getElementById("envelopeContainer").classList.add("hidden");
+        characterCard.classList.remove("hidden");
+        characterCard.classList.add("fade-in");
+        // Exibe o botão reiniciar somente após virar o card
+        document.getElementById("resetGame").classList.remove("hidden");
+      }, 800);
+    });
+
+    // Botão de reiniciar: volta ao estado do envelope (formato de card)
+    document.getElementById("resetGame").addEventListener("click", function() {
+      setCookie("used_" + currentLang, "", -1);
+      document.getElementById("characterCard").classList.add("hidden");
+      document.getElementById("resetGame").classList.add("hidden");
+      const flipCardInner = document.getElementById("flipCardInner");
+      flipCardInner.classList.remove("flip-animation");
+      document.getElementById("envelopeContainer").classList.remove("hidden");
+    });
+  </script>
+</body>
+</html>
